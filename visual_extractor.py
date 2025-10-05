@@ -347,6 +347,58 @@ class VisualElementsExtractor:
         
         return False
 
+    def extract_year_from_publication_info(self, soup: BeautifulSoup) -> Optional[int]:
+        """Extract year from publication information line above the title"""
+        try:
+            text_content = soup.get_text()
+            
+            # PRIORITY 1: Search specifically in lines containing "Published"
+            # Patterns for "Published in final edited form as: Curr Opin Plant Biol. 2015 Jul 5;27:59–66"
+            published_patterns = [
+                r'Published[^.]*?\b(19\d{2}|20[0-2]\d)\b',  # "Published... 2015"
+                r'Published[^.]*?as:[^.]*?\b(19\d{2}|20[0-2]\d)\b',  # "Published... as: ... 2015"
+            ]
+            
+            for pattern in published_patterns:
+                matches = re.findall(pattern, text_content, re.IGNORECASE)
+                if matches:
+                    for year in matches:
+                        year_int = int(year)
+                        if 1900 <= year_int <= 2025:
+                            logger.info(f"Year found in 'Published' line: {year}")
+                            return year_int
+            
+            # PRIORITY 2: Search in lines containing journal information and year
+            # Patterns like "Curr Opin Plant Biol. 2015 Jul 5;27:59–66"
+            journal_patterns = [
+                r'\w+\.?\s+\b(19\d{2}|20[0-2]\d)\b\s+\w+\s+\d+[;:]',  # "Curr Opin Plant Biol. 2015 Jul 5;"
+                r'\w+\.?\s+\b(19\d{2}|20[0-2]\d)\b\s+\w+\s+\d+',  # "Curr Opin Plant Biol. 2015 Jul 5"
+            ]
+            
+            for pattern in journal_patterns:
+                matches = re.findall(pattern, text_content)
+                if matches:
+                    for year in matches:
+                        year_int = int(year)
+                        if 1900 <= year_int <= 2025:
+                            logger.info(f"Year found in journal line: {year}")
+                            return year_int
+            
+            # PRIORITY 3: Search for any valid year as last resort
+            year_matches = re.findall(r'\b(19\d{2}|20[0-2]\d)\b', text_content)
+            if year_matches:
+                for year in year_matches:
+                    year_int = int(year)
+                    if 1900 <= year_int <= 2025:
+                        logger.info(f"Year found (last resort): {year}")
+                        return year_int
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Error extracting year: {e}")
+            return None
+
     def download_image(self, url: str, filename: str) -> Optional[Path]:
         """Download an image from URL and save it locally."""
         try:
