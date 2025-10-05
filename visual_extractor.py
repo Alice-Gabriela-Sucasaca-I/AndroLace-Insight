@@ -511,21 +511,11 @@ class VisualElementsExtractor:
                 metadata['journal'] = journal_elem.get('content', '')
             else:
                 metadata['journal'] = journal_elem.get_text(strip=True)
-                # Extract year - AGREGAR ESTO
-        year_elem = soup.select_one('meta[name="citation_publication_date"]')
-        if year_elem:
-            date_content = year_elem.get('content', '')
-            year_match = re.search(r'\b(19|20)\d{2}\b', date_content)
-            if year_match:
-                metadata['year'] = year_match.group()
-
-        # Si no encontró año en meta, buscar en texto
-        if not metadata['year']:
-            pub_info = soup.select_one('.publication-date, .pub-date, .article-date')
-            if pub_info:
-                year_match = re.search(r'\b(19|20)\d{2}\b', pub_info.get_text())
-                if year_match:
-                    metadata['year'] = year_match.group()
+                
+        # Extract year - Search in publication information line above the title
+        year = self.extract_year_from_publication_info(soup)
+        metadata['year'] = year if year is not None else ''
+        
         return metadata
     def save_json_metadata(self):
         """Save extracted elements metadata to JSON file."""
